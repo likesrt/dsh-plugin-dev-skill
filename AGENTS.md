@@ -13,14 +13,14 @@ plus condensed reference docs in `References/`. Verify with `bash scripts/verify
 ## Mandatory flow on entry
 
 1. **Run `SKILL.md` §0.1 first**: read the local `VERSION`, fetch the latest tag from
-   `https://github.com/green-dalii/dsh-plugin-dev-skill`, and update this repository if the
+   `https://github.com/likesrt/dsh-plugin-dev-skill`, and update this repository if the
    remote is newer. Use the tag-pinned raw URL form
-   `https://raw.githubusercontent.com/green-dalii/dsh-plugin-dev-skill/${TAG}/VERSION`
+   `https://raw.githubusercontent.com/likesrt/dsh-plugin-dev-skill/${TAG}/VERSION`
    (substitute the latest tag for `${TAG}`),
    not the `main` branch URL, to avoid raw.githubusercontent.com CDN cache lag right after a release.
 2. **State the SDK baseline**: every API statement in `SKILL.md` and `References/` is verified
    against the version pair `metadata.sdk-baseline` (in `SKILL.md` frontmatter) and `cordis`
-   at the `4.0.6-alpha.1` floor. If you write a code template, target that pair.
+   at the `4.1.0` floor. If you write a code template, target that pair.
 3. **Run `bash scripts/verify.sh`** before claiming a change is complete. It checks:
    - `SKILL.md` YAML frontmatter is legal (kebab-case `name`, `description`, full `metadata`),
    - the version triple `VERSION` / `SKILL.md` `metadata.version` / `CHANGELOG.md` heading

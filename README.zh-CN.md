@@ -3,9 +3,9 @@
 [English](README.md) | **简体中文**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Updated](https://img.shields.io/badge/updated-2026--11--01-informational)](CHANGELOG.md)
-[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-0.2.2--alpha.2-blue)](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.2-alpha.2)
-[![Skill version](https://img.shields.io/badge/skill-0.7.0-brightgreen)](VERSION)
+[![Updated](https://img.shields.io/badge/updated-2026--11--12-informational)](CHANGELOG.md)
+[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-0.2.2--rc.2-blue)](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.2-rc.2)
+[![Skill version](https://img.shields.io/badge/skill-0.8.0-brightgreen)](VERSION)
 [![deepseek-harness on GitHub](https://img.shields.io/github/stars/deepseek-ai/deepseek-harness?logo=github&label=deepseek-harness)](https://github.com/deepseek-ai/deepseek-harness)
 [![Docs](https://img.shields.io/badge/Docs-DeepSeek%20Harness-blue)](https://deepseek-harness.github.io/deepseek-harness/develop/basic/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
@@ -36,7 +36,7 @@
 
 写一个 DSH "Hello World" 插件只需一行。但要写出**正确的**插件——`defineTool` 输出契约遵守、可逆效应替代手工清理、`inject` 依赖语义、Standard Schema 配置校验、事件分发模式选型、真正能装上车的打包——才是本技能编码的内容。
 
-技能**基于第一性原理**：每条铁律都基于底层框架 Cordis 的学术基础（[arXiv:2608.25512](https://arxiv.org/abs/2608.25512)），并把这些原理落地成可直接照抄的代码模板。SKILL.md 里每条 API 陈述都对照真实 SDK 类型在声明基线（`@deepseek-ai/*` 0.2.2-alpha.2、cordis 4.0.6-alpha.1）实测过，模板通过 `tsc --strict`。
+技能**基于第一性原理**：每条铁律都基于底层框架 Cordis 的学术基础（[arXiv:2608.25512](https://arxiv.org/abs/2608.25512)），并把这些原理落地成可直接照抄的代码模板。SKILL.md 里每条 API 陈述都对照真实 SDK 类型在声明基线（`@deepseek-ai/*` 0.2.2-rc.2、cordis 4.1.0）实测过，模板通过 `tsc --strict`。
 
 ## 你能得到什么
 
@@ -121,7 +121,7 @@ DSH 的 skill 系统接受「目录包（`<name>/SKILL.md`）」或「平铺 Mar
 
 ```sh
 # 推荐：符号链接到 git 检出，之后一句 git pull 即可保持最新
-git clone https://github.com/green-dalii/dsh-plugin-dev-skill.git ~/src/dsh-plugin-dev-skill
+git clone https://github.com/likesrt/dsh-plugin-dev-skill.git ~/src/dsh-plugin-dev-skill
 ln -s ~/src/dsh-plugin-dev-skill ~/.dsh/skills/dsh-plugin-dev-skill
 
 # 或者：普通拷贝（更新时需要重新拷贝）
@@ -138,15 +138,15 @@ cp -r References ~/.dsh/skills/dsh-plugin-dev-skill/References
 
 **方式 A：让 Agent 自己安装（推荐）**——直接把仓库地址告诉它，让它自行克隆安装。例如在 Claude Code 会话里粘贴：
 
-> 请把 https://github.com/green-dalii/dsh-plugin-dev-skill 这个技能安装到 `~/.claude/skills/dsh-plugin-dev-skill/`，之后我处理 DeepSeek Harness 插件开发时加载 `SKILL.md`。
+> 请把 https://github.com/likesrt/dsh-plugin-dev-skill 这个技能安装到 `~/.claude/skills/dsh-plugin-dev-skill/`，之后我处理 DeepSeek Harness 插件开发时加载 `SKILL.md`。
 
 或者在 Codex CLI 会话里粘贴：
 
-> 请把 https://github.com/green-dalii/dsh-plugin-dev-skill 这个技能安装到 `~/.agents/skills/dsh-plugin-dev-skill/`。
+> 请把 https://github.com/likesrt/dsh-plugin-dev-skill 这个技能安装到 `~/.agents/skills/dsh-plugin-dev-skill/`。
 
 通用说法（适用于任何 Agent）：
 
-> 请把 https://github.com/green-dalii/dsh-plugin-dev-skill 安装到你的技能目录（文件夹 `dsh-plugin-dev-skill`，内含 `SKILL.md` 与 `References/`），当任务涉及开发 DeepSeek Harness（DSH）插件时使用它。
+> 请把 https://github.com/likesrt/dsh-plugin-dev-skill 安装到你的技能目录（文件夹 `dsh-plugin-dev-skill`，内含 `SKILL.md` 与 `References/`），当任务涉及开发 DeepSeek Harness（DSH）插件时使用它。
 
 **方式 B：手动安装**
 
@@ -160,7 +160,7 @@ cp -r References ~/.dsh/skills/dsh-plugin-dev-skill/References
 | 任意 Agent Skills 宿主 | `<技能目录>/dsh-plugin-dev-skill/SKILL.md` | 按宿主说明 |
 
 ```sh
-git clone https://github.com/green-dalii/dsh-plugin-dev-skill.git ~/.claude/skills/dsh-plugin-dev-skill
+git clone https://github.com/likesrt/dsh-plugin-dev-skill.git ~/.claude/skills/dsh-plugin-dev-skill
 # 或改为符号链接：
 ln -s /path/to/dsh-plugin-dev-skill ~/.claude/skills/dsh-plugin-dev-skill
 ```
@@ -213,7 +213,7 @@ DeepSeek Harness 是一个 Agent Harness SDK：其中每一项能力——工具
 
 - 官方文档站（中文/英文）：https://deepseek-harness.github.io/deepseek-harness/develop/basic/
 - 源码仓库：https://github.com/deepseek-ai/deepseek-harness
-- 最新 tag 发布：https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.2-alpha.2
+- 最新 tag 发布：https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.2-rc.2
 - 论文：《A Programming Paradigm for Spatiotemporal Composability》（Cordis 框架的学术基础，arXiv:2608.25512）：https://arxiv.org/abs/2608.25512
 
 所有参考文档均为**精简提炼**（不是官方文档照搬），以「开发出正确、高效、符合规范的插件」为目标组织。

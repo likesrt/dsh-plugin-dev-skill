@@ -5,7 +5,7 @@
 本项目是**纯文档型仓库**，不包含可执行代码、不处理用户数据，因此攻击面极小。但仍请遵守以下报告流程：
 
 - **不要**创建公开 issue 描述可能涉及安全的内容。
-- 请将问题通过 GitHub 的 [Security Advisories](https://github.com/green-dalii/dsh-plugin-dev-skill/security/advisories/new)（私有报告）提交，或发送邮件至仓库所有者。
+- 请将问题通过 GitHub 的 [Security Advisories](https://github.com/likesrt/dsh-plugin-dev-skill/security/advisories/new)（私有报告）提交，或发送邮件至仓库所有者。
 - 请在报告中说明：
   - 涉及的文件与行号
   - 问题描述（如链接失效、内容误导、示例代码存在风险）

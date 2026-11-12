@@ -28,11 +28,11 @@ jobs:
           gh release list --repo deepseek-ai/deepseek-harness --limit 3
           echo
           echo "==> upstream tags (most recent)"
-          git ls-remote --tags --sort=-v:refname https://github.com/deepseek-ai/deepseek-harness.git \
+          git ls-remote --tags --refs --sort=-v:refname https://github.com/deepseek-ai/deepseek-harness.git \
             | awk -F/ '/refs\/tags\/dsh-v/ {print $3; exit}'
           echo
           echo "==> skill release tag"
-          git ls-remote --tags --sort=-v:refname https://github.com/green-dalii/dsh-plugin-dev-skill.git \
+          git ls-remote --tags --refs --sort=-v:refname https://github.com/likesrt/dsh-plugin-dev-skill.git \
             | awk -F/ '/refs\/tags\/v/ {print $3; exit}'
 
   shellcheck:

@@ -1,6 +1,6 @@
 # 06 · 服务与依赖、事件系统
 
-> 精简提炼自 develop/framework/service、develop/framework/events、reference/event-producer-consumer、reference/cordis-primer、reference/defensive-patterns。API 与分发模式以本地 SDK 类型（cordis **4.0.6-alpha.1** + `@deepseek-ai/*` **0.2.2-alpha.2**）为准。逐版本变化见 `References/00-INDEX.md`。
+> 精简提炼自 develop/framework/service、develop/framework/events、reference/event-producer-consumer、reference/cordis-primer、reference/defensive-patterns。API 与分发模式以本地 SDK 类型（cordis **4.1.0** + `@deepseek-ai/*` **0.2.2-rc.2**）为准。逐版本变化见 `References/00-INDEX.md`。
 
 ## 1. 服务是什么
 
@@ -222,6 +222,12 @@ declare module '@deepseek-ai/cordis' {
 - **新增**：`llm/models-updated`（emit）、`plugin-manager/operation`（parallel）、`plugin-manager/update-state`（emit）、`schedule/resolve-agent`（waterfall）、`forge/providers-changed`（parallel）。
 - **`session/attachment` 载荷变更**（rc.3）：由 `{ sessionId, attachmentId }` 改为 `{ sessionId, attachment }`，`attachment` 是含 `attachmentId` / `mediaType` / `bytes` / `width` / `height` 的完整引用。客户端 `session.readAttachment()` 同样改收完整引用。处理端只校验 ID、实际格式、字节长度与宽高；`name` / `originalDimensions` 视为调用方展示信息；**不再校验图片与 Session 的归属关系**。
 - **Session 写入时序收紧**（rc.2）：`Session.append()` / `appendPluginRecord()` 在实例进入 `SessionStore` 且 `session/created` 同步派发完成**之前**、以及离开之后**拒绝写入**。所有权自 `prepare()` / `enter()` 起算；`session/created` 派发期间 `ctx.agents.get(session.id)` 返回 `undefined`。**把写操作与 Agent 相关工作移出 `session/created` 监听器**，改到 setup 阶段或 `agent/created`。
+
+### 0.2.2-alpha.3 ~ rc.2 的记录与 API 变动
+
+- **runtime-context 记录**：`user/message` 且 `source.kind: 'runtime-context'` 的文本现在包在 `<system-reminder>` 中；首个快照只介绍当前会话，后续快照明确替换对话摘要中保留的上下文；清空标记带 `form: 'snapshot'` 与 `sections: []`。不要按字面文本匹配，优先读 `source.kind` / `source.sections`；旧记录会在下一次准入请求时刷新一次。
+- **`Session.append` 重载**：现在同时接受单事件调用与 `readonly SessionEventInput[]` 数组。普通单事件调用不变；包装 `Session['append']` 的代码必须保留两个重载（可用 `Proxy` + `Reflect.apply` 转发），测试替身要分别调用两种形式。
+- **cordis `internal/commit`**（4.1.0）：`Fiber.update()` 的持久化通知从 `internal/update` 的 `noSave` 参数拆成独立的 `internal/commit` emit 事件；`internal/update` 监听器签名为 `(this: Fiber, resolvedConfig, next: () => Awaitable<void>)`，`internal/config` 为 `(fiber: Fiber, next: () => any)`。
 
 ## 8. 实践规则
 

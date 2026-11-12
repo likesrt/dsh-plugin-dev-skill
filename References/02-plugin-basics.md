@@ -1,6 +1,6 @@
 # 02 · 插件基础：形态、生命周期、effect 与 HMR
 
-> 精简提炼自 develop/basic/（第一个插件）、develop/framework/（插件与生命周期）、cordis-tutorial 第 1、2 章。API 签名以本地 `@deepseek-ai/cordis` **4.0.6-alpha.1** + **`@deepseek-ai/*` 0.2.2-alpha.2** 为准。基线变更与逐版本差异见 `References/00-INDEX.md` 与 SKILL.md §0/§10/§12。
+> 精简提炼自 develop/basic/（第一个插件）、develop/framework/（插件与生命周期）、cordis-tutorial 第 1、2 章。API 签名以本地 `@deepseek-ai/cordis` **4.1.0** + **`@deepseek-ai/*` 0.2.2-rc.2** 为准。基线变更与逐版本差异见 `References/00-INDEX.md` 与 SKILL.md §0/§10/§12。
 
 ## 1. 插件是什么
 
@@ -126,11 +126,11 @@ export function apply(ctx: Context) {
 const fiber = ctx.plugin(myPlugin)
 await fiber.dispose()      // 卸载
 await fiber.restart()      // 用当前配置立即重载
-fiber.update(newConfig)    // 校验新配置；返回 void，重启挂在 internal/update waterfall 上
+fiber.update(newConfig)    // 校验并应用新配置；返回 Awaitable<void>，可等待重启完成
 await fiber.await()        // 等待当前生命周期工作（含 update 触发的重启），并重抛启动错误
 ```
 
-cordis 4.0.4 起 `Fiber.update()` **返回 `void`**（本基线 4.0.6-alpha.1 延续该行为），重启跑在 `internal/update` waterfall 之后，所以只有 `ValidationError` 会同步传播出来；要确认重启是否成功，得 `await fiber.await()` 或观察该 waterfall。**4.0.6 起新增配置读写三入口**（`fiber.effectiveConfig` / `fiber.rawConfig` / `fiber.resolveConfig()`），见 `References/09-cordis-primer.md` §7。
+**cordis 4.1.0 起 `Fiber.update()` 返回 `Awaitable<void>`**：需要重启时是 Promise，可直接 `await fiber.update(config)` 等重启完成；监听器在 `internal/update` 里同步否决时返回 `undefined`。`ValidationError` 仍在同步阶段抛出。`noSave` 参数保留在 `update()` 上，但持久化通知改由新的 `internal/commit` emit 事件承担。**4.0.6 起新增配置读写三入口**（`fiber.effectiveConfig` / `fiber.rawConfig` / `fiber.resolveConfig()`），见 `References/09-cordis-primer.md` §7。
 
 `dispose` 保证：该插件所有注册被移除；子插件递归卸载；Promise 在所有异步清理完成后兑现。
 

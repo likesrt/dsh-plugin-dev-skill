@@ -84,7 +84,7 @@ if [ "${SKIP_URLS:-0}" != "1" ]; then
   grep -rhoE 'https?://[^ )>`,}{）]+' . --include='*.md' --include='*.txt' \
     | sed 's/[.,)）]*$//' \
     | grep -v '\$' \
-    | grep -E '^(https://deepseek-harness\.github\.io|https://github\.com/deepseek-ai|https://github\.com/cordiverse|https://arxiv\.org|https://registry\.npmjs\.org|https://raw\.githubusercontent\.com/green-dalii)' \
+    | grep -E '^(https://deepseek-harness\.github\.io|https://github\.com/deepseek-ai|https://github\.com/cordiverse|https://arxiv\.org|https://registry\.npmjs\.org|https://raw\.githubusercontent\.com/likesrt)' \
     | sort -u > "$tmp_urls"
   total=$(wc -l < "$tmp_urls" | tr -d ' ')
   bad=0

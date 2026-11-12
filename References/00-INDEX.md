@@ -6,7 +6,7 @@
 
 使用方式：先读项目根目录的 `SKILL.md`（操作手册），需要深度背景时按需查阅本目录对应文件。
 
-**SDK 基线**：所有 API 陈述以 `@deepseek-ai/*` **0.2.2-alpha.2**（cordis **4.0.6-alpha.1**）的类型定义实测为准。**0.2.1-rc.1 ~ 0.2.2-alpha.2 是一次大重构**（跨越 43 篇上游升级指南，其中 25 篇对插件开发有实质影响），**对 tool / LLM / service 插件的公共 API 破坏**：① 工具执行模式拆成独立 executor 插件（`dsh-tools` 的 `mode` / `maxParallelSubCalls` 配置字段删除、`ctx.tools.presentAs()` 移除、`DSH_TOOLS_MODE` 失效）；② 工具声明改由「步骤准入」决定（`ctx.tools.register(def, { when })` 条件注册、`system-prompt/assemble` 不再携带工具数组）；③ `agent/request` 事件不再公开；④ session 投影注册改为异步返回 `ProjectionHandle`；⑤ `GenerateOptions.purpose` 改为声明式（`LlmRequestPurposeMap`）；⑥ PTC 新增 `script` 程序格式与 `retainsState`，调用方取消改用 `ABORTED`；⑦ 官方 bundle 清单迁到 `@deepseek-ai/dsh-official-bundles`。官方文档站发布 `develop/**`、`guide/**`、`reference/**` 与部分 `subsystems/{ptc-runtime, schedule, approval, claude-code-mods, …}`；而 `docs/glossary`、`docs/event-producer-consumer`、`docs/defensive-patterns` 与多数 `docs/subsystems/*`（`deliverables`、`mcp`、`ssh`、`browser-use`、`computer-use`、`otel`、`product-telemetry`、`boot`、`voice-input`、`office-to-pdf` 等）**仅存在于仓库**，相关链接指向 GitHub blob。各版本升级指南由 SKILL.md §13 给到 GitHub 原文链接。
+**SDK 基线**：所有 API 陈述以 `@deepseek-ai/*` **0.2.2-rc.2**（cordis **4.1.0**）的类型定义实测为准。**0.2.2-alpha.3 ~ rc.2 是增量同步**：cordis `4.0.6-alpha.1` → `4.1.0`（`Fiber.update()` 改为可 await、`internal/update` / `internal/config` 签名变化）、子代理工具改用名字寻址、Office 服务改名 `ctx.officeToPdf` → `ctx.officeKit`、`BundleInfo.updatable` → `update`、`new LlmError` 的 code 收窄为 `BuiltinLlmFailureCode`。**0.2.1-rc.1 ~ 0.2.2-alpha.2 是一次大重构**（跨越 43 篇上游升级指南，其中 25 篇对插件开发有实质影响），**对 tool / LLM / service 插件的公共 API 破坏**：① 工具执行模式拆成独立 executor 插件（`dsh-tools` 的 `mode` / `maxParallelSubCalls` 配置字段删除、`ctx.tools.presentAs()` 移除、`DSH_TOOLS_MODE` 失效）；② 工具声明改由「步骤准入」决定（`ctx.tools.register(def, { when })` 条件注册、`system-prompt/assemble` 不再携带工具数组）；③ `agent/request` 事件不再公开；④ session 投影注册改为异步返回 `ProjectionHandle`；⑤ `GenerateOptions.purpose` 改为声明式（`LlmRequestPurposeMap`）；⑥ PTC 新增 `script` 程序格式与 `retainsState`，调用方取消改用 `ABORTED`；⑦ 官方 bundle 清单迁到 `@deepseek-ai/dsh-official-bundles`。官方文档站发布 `develop/**`、`guide/**`、`reference/**` 与部分 `subsystems/{ptc-runtime, schedule, approval, claude-code-mods, …}`；而 `docs/glossary`、`docs/event-producer-consumer`、`docs/defensive-patterns` 与多数 `docs/subsystems/*`（`deliverables`、`mcp`、`ssh`、`browser-use`、`computer-use`、`otel`、`product-telemetry`、`boot`、`voice-input`、`office-kit` 等）**仅存在于仓库**，相关链接指向 GitHub blob。各版本升级指南由 SKILL.md §13 给到 GitHub 原文链接。
 
 | 文件 | 主题 | 官方对应章节 |
 |---|---|---|
@@ -46,3 +46,11 @@
 | `ctx.sessionProjections.register(def)` 返回 disposer | **`Promise<ProjectionHandle<S>>`** | 0.2.1-rc.2 起返回 thenable（`instanceof Promise` 为 `false`），须 await 并持有 handle |
 | `@deepseek-ai/dsh-app-boot` 的 bundle 清单导出 | **`@deepseek-ai/dsh-official-bundles`** | 0.2.1-rc.2 迁包（`initProfile` / `loadProfile` 仍在 `dsh-app-boot`） |
 | `dsh-tool-subagent` 的 `modelSelectionSettings` | **`modelSelection`** | 0.2.1-rc.1 改名；模型发现另需 `modelDiscovery: true` |
+| `dsh-office-to-pdf` / `ctx.officeToPdf` | **`dsh-office-kit` / `ctx.officeKit`** | 0.2.2-alpha.3 改名；行 id `office-kit`，类型 `OfficeKit*`，Remote `officeKit/*` |
+| `BundleInfo.updatable` | **`BundleInfo.update?: 'registry' \| 'git'`** | 0.2.2-rc.1；用 `update === 'registry'` / `update !== undefined` 判断能力 |
+| `send_message({ agent_id })` / `interrupt_agent({ agent_id })` | **`{ agent }`** | 0.2.2-alpha.3 起按名字（或 Session id）寻址；`list_agents` 行改为 `{ name, status, description? }` |
+| `ctx.subagents.drainChildren()` / `listChildren()` / `list()` | **（已删除）** | 0.2.2-alpha.3 起；用 `startActivation().dispose()` / `ctx.sessionQuery.observeSession()` / `getProvider()` |
+| `dsh-deepseek-account-platform` / `PlatformAccount` | **`dsh-deepseek-account` / `DeepSeekAccount`** | 0.2.2-rc.1 起具体服务取代抽象账户类 |
+| `new LlmError(msg, code: string)` | **`code: BuiltinLlmFailureCode`** | 0.2.2-rc.2 收窄；自定义失败走 `LlmError.fromFailure()` |
+| `Fiber.update()` 返回 `void` | **返回 `Awaitable<void>`** | cordis 4.1.0；可 `await fiber.update()`，同步否决时为 `undefined` |
+| `internal/update(config, noSave, next)` | **`internal/update(resolvedConfig, next)`** | cordis 4.1.0；`noSave` 拆到 `internal/commit` emit |

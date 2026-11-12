@@ -1,13 +1,8 @@
 # 09 · Cordis 入门与 ctx API 速查
 
-> 精简提炼自 reference/cordis-primer、reference/cordis-api/*（context/events/fiber/registry/service/inherited）。ctx API 与分发模式已逐条对照本地 `@deepseek-ai/cordis` **4.0.6-alpha.1** 类型定义核实。
+> 精简提炼自 reference/cordis-primer、reference/cordis-api/*（context/events/fiber/registry/service/inherited）。ctx API 与分发模式已逐条对照本地 `@deepseek-ai/cordis` **4.1.0** 类型定义核实。
 >
-> **4.0.6 相对 4.0.5-alpha.1 的变化极小**：`src/*.ts` 中**只有 `fiber.ts` 变动**（`context.ts` / `registry.ts` / `service.ts` / `reflect.ts` / `utils.ts` / `events.ts` / `index.ts` 逐字节未变）。新增三处公开能力（**非破坏**）：
-> - `fiber.rawConfig`（getter/setter）—— 读取或保留**原始**配置输入，不做表达式求值也不做校验；取代直接读 `fiber._config`。
-> - `fiber.effectiveConfig`（getter）—— 读取现有激活 / update 生命周期**发布**的配置对象（不克隆、不重新解析）；取代直接读 `fiber.config`。
-> - `fiber.resolveConfig(config)` —— 公开的配置求值入口：按本 fiber 的 `internal/config` hooks 与运行时 schema 求值并校验候选配置，**但不发布结果、不替换原始输入、不提交易失引用**。原先的私有 `_resolveConfig` 已移除。
->
-> **4.0.4 相对 4.0.2 的公开 API 差异也很小**：新增类型导出 `Volatile` / `VolatileSnapshot`；`Fiber.update()` 改为返回 `void`（见 §7）；`'internal/update'` 监听器签名收窄为 `next: () => void`（同步）。
+> **4.1.0 相对 4.0.6-alpha.1 的变化（本轮基线）**：`Fiber.update()` 返回 **`Awaitable<void>`**（可 await 重启）；`internal/update` 监听器签名改为 `(this: Fiber, resolvedConfig: any, next: () => Awaitable<void>)`，`noSave` 拆到新的 **`internal/commit`** emit 事件；`internal/config` 改为 `(fiber: Fiber, next: () => any)`；服务提供方保留到依赖方卸载完，失败 fiber 只能靠 `update()` 恢复；内部字段 `fiber.store` → `fiber.committed`、`Impl.fiber` → `Impl.ctx`；`LoggerLevel` 数值顺序变为 `ERROR=0 / WARN=1 / INFO=2 / DEBUG=3`。**4.0.4 相对 4.0.2**：新增类型导出 `Volatile` / `VolatileSnapshot`；当时把 `'internal/update'` 的 `next` 收窄为同步，4.1.0 又改回可 await。
 
 ## 1. 五个核心概念
 
@@ -77,7 +72,7 @@ bail 值 = 非 `null`、非 `false`、非 `undefined` 的返回值（`isBailed()
 
 **框架继承事件**（低频，知道即可；标注的是分发模式）：
 - 通知型：`internal/plugin`、`internal/status`、`internal/service`、`internal/dispatch`
-- waterfall 拦截：`internal/config`（解析插件配置）、`internal/update`（签名 `(this: Fiber, config: any, noSave: boolean, next: () => void): void`；跳过 `next()` 即否决，且 `next` **只能同步调用**——上游 loader 的迁移就是把 `await next()` 改成 `next()`）、`internal/get` / `internal/set`（经 ctx 代理读写服务）、`loader/patch-context`（同样只同步调用）
+- waterfall 拦截：`internal/config`（签名 `(fiber: Fiber, next: () => any)`；解析候选配置但不发布）、`internal/update`（签名 `(this: Fiber, resolvedConfig: any, next: () => Awaitable<void>)`；跳过 `next()` 即否决，`next()` 返回的 Promise 要 await）、`internal/get` / `internal/set`（经 ctx 代理读写服务）、`loader/patch-context`（同步调用）；另有 `internal/commit`（emit，持久化程序化 update 的原始配置；`noSave` 时不发）
 - bail：`internal/listener`（注册监听器前，非 null 结果替换注册）
 - 其它：`exit(signal)`、`loader/config-update`、`loader/entry-init`、`loader/partial-dispose`、`hmr/change`、`hmr/reload`、`hmr/config-update-failed`（parallel）
 
@@ -112,12 +107,13 @@ interface Plugin.Base<T> {
 - 每个已加载插件实例一个 fiber：`PENDING → LOADING → ACTIVE → UNLOADING → DISPOSED`（`LOADING`/`ACTIVE` 抛错则进入 `FAILED`）。
 - `fiber.dispose()` — 等待所有清理（含异步 disposer）完成，递归卸载子插件。
 - `fiber.restart()` / `fiber.await()` — 按当前配置重载 / 等到稳定态并抛出启动错误。
-- `fiber.update(config, noSave?)` — 更新配置并重启（先跑 `internal/update` waterfall，可能被否决或替换）。**返回 `void`**，不再返回/等待重启结果；要等重启完成用 `await fiber.await()`，且只有 `ValidationError` 会传播。
+- `fiber.update(config, noSave?)` — 更新配置并重启（先跑 `internal/update` waterfall，可能被否决或替换）。**返回 `Awaitable<void>`**：需要重启时是 Promise，可直接 `await fiber.update(config)`；监听器同步否决时返回 `undefined`。`ValidationError` 仍在同步阶段传播；持久化通知走 `internal/commit`。
 - **配置读写三入口**（4.0.6 起推荐）：
-  - `fiber.effectiveConfig` —— 已发布的、经校验的配置对象（不克隆、不重新解析）；激活前是 `undefined`，卸载后仍可读；要活实例就查 `state`。
+  - `fiber.effectiveConfig` —— 激活或最近一次成功保留实例的 update 传入的配置对象（不克隆、不重新解析）；被拒绝/被取代的 update 不替换它；激活前是 `undefined`，卸载后仍可读；要活实例就查 `state`。
   - `fiber.rawConfig` —— 原始输入（未求值、未校验）；可读取也可写入（写入**不改变运行中配置、不触发 update**），用于「保留原始输入以便下次激活时重新解析」。
   - `fiber.resolveConfig(candidate)` —— 用本 fiber 的 `internal/config` hooks 与运行时 schema 求值并校验候选；**不发布结果、不替换原始输入、不提交易失引用**；schema 拒绝时抛 `ValidationError`，hook 错误直接传播。用它做「先验证再提交」。
 - 处置器按注册逆序**开始**调用，但多个异步处置器并发执行；有顺序依赖的清理必须放进同一个 effect 的处置器里串行等待。
+- **4.1.0 生命周期**：服务提供方保留其实现直到依赖方卸载完；被取代的激活错误只记录、不使替换状态失败；已处置实例不能访问已释放的注入；失败 fiber 只能靠 `update()` 恢复（依赖变化也不会自动恢复）。
 
 ## 8. Loader 配置细节
 

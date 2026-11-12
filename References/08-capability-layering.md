@@ -130,7 +130,7 @@ harness 的核心服务（`ctx.<key>` → 角色 → 说明）：
 | `ctx.subprocess` | seam | 进程 spawn 坐标与生命周期；`subprocess-local`/`subprocess-ssh` 等 |
 | `ctx.ssh` | core | 一条已认证 OpenSSH 连接；`fs-ssh`/`subprocess-ssh`/`sandbox-ssh` 据此把 fs、进程与沙箱整体搬到远端 |
 | `ctx.fs` | seam | 文件系统；`fs-local`/`fs-sandbox`/`fs-ssh`；`fs-observation-policy` 经 `fs/*` 事件门禁 |
-| `ctx.web` | seam | 搜索与抓取；`web-search-exa`/`web-search-perplexity`/`web-search-deepseek`/`web-fetch-http` |
+| `ctx.web` | seam | 搜索与抓取；`web-search-exa`/`web-search-perplexity`/`web-search-deepseek`/`web-fetch-http`。**0.2.2-rc.1 起** DeepSeek Search/Fetch 的 provider 选项去掉顶层 `baseURL`，`auth` 改为 `{ sources, missingCredentialMessage? }`（按顺序解析 account / api-key），并新增 `searchBilling` / `fetchBilling` |
 | `ctx.mcpResources` | seam | 连接所有者在调用 agent 的作用域内提供共享 MCP 资源工具；`mcp-client` 侧提供 |
 | `ctx.jobs` | seam | 后台任务注册表；`jobs-local` 提供，`tool-jobs` 面向模型控制 |
 | `ctx.subagents` | seam | 子代理传输；`subagent-spawn-in-process`/`-fork-in-process`/`-acp`/`-codex`/`-claude-code`/`-dsh-sdk` |
@@ -150,12 +150,12 @@ harness 的核心服务（`ctx.<key>` → 角色 → 说明）：
 | `ctx.compaction` | seam | 上下文压缩；`compaction-basic` 提供 |
 | `ctx.tokenMeter` | core | token 计量 |
 | `ctx.ptcRuntime` | seam | **PTC mode** 程序运行（用宿主异步绑定运行模型写的程序）；`@deepseek-ai/dsh-ptc-runtime-node`（由 `dsh-code-runtime-worker-thread` 改名并改在全新 Node 子进程 + `ctx.sandbox` 下执行）与实验性 `@deepseek-ai/dsh-experimental-ptc-runtime-python` 提供，`tools` 与 `workflow-ptc` 消费 |
-| `ctx.terminals` | seam | PTY 会话；`terminal-bash` 提供，`tool-terminal` 面向模型 |
+| `ctx.terminals` | seam | PTY 会话；`terminal-bash` 提供，`tool-terminal` 面向模型。**0.2.2-rc.1 起** `TerminalBackendCleanupError` 继承 `TerminalError`（code `CLEANUP_FAILED`），不再是 `AggregateError` |
 | `ctx.lsp` | seam | LSP 导航；`lsp-stdio` 提供，`tool-lsp` 消费（只有四种标准化查询，无协议逃生口） |
 | `ctx.browserUse` | seam | 浏览器操作提供方注册；提供方（playwright-mcp / chrome-devtools-mcp / stagehand-native）自持工具与浏览器资源 |
 | `ctx.computerUse` | seam | 桌面操作提供方注册（cua-driver 的 mcp / native 变体）；提供方自持模型工具 |
 | `ctx.attachments` | seam | 会话事件之前提交已接受的图片；`attachment-local` 提供，Session Controller / `tool-fs` / LLM 适配器消费 |
-| `ctx.officeToPdf` | core | 已授权 Office 字节在宿主上转换；未声明原生目标时用 Node WASM |
+| `ctx.officeKit` | core | 已授权 Office 字节在宿主上转换；未声明原生目标时用 Node WASM。**0.2.2-alpha.3 起**由 `ctx.officeToPdf` / 包 `dsh-office-to-pdf` 改名而来（行 id `office-kit`）；无 Kit 时也能注册，转换时才以 `OfficeKitError` code `unavailable` 拒绝 |
 | `ctx.userQuestions` | seam | 人工回答提供方；`tool-ask-user` 在提供方无关的 `ask()` promise 上暂停 |
 | `ctx.directoryPicker` | seam | 带判别标记的目录选择：native（系统选择器）/ browse（应用内浏览器） |
 | `ctx.workflowEngine` | seam | 工作流引擎；每个上下文一个引擎，`workflow-ptc` 提供 |
@@ -172,11 +172,11 @@ harness 的核心服务（`ctx.<key>` → 角色 → 说明）：
 | `ctx.remoteAccess` | core | 0.2.1-alpha.x 起新增：远程访问宿主能力；`webserver/index-inject` 在 webserver 注入时挂它 |
 | `ctx.webApp` | core | 0.2.1-alpha.x 起新增：与 `ctx.web`（搜索/抓取）并列的 Web 应用 seam |
 | `ctx.workingDirectory` | core | 0.2.1-alpha.x 起新增：会话级 cwd；`system-prompt/assemble` 监听者之一，`session/event` 持久化字段 |
-| `ctx.worktrees` | core | 0.2.1-alpha.x 起新增：git worktree 状态折叠（合并/分支/合并视图） |
+| `ctx.worktrees` | core | 0.2.1-alpha.x 起新增：git worktree 状态折叠（合并/分支/合并视图）。**0.2.2-rc.1 起**归档 Session 可删除其干净 worktree（保留分支），Forge bundle 的 `forge-worktree` 行并入 `worktree` |
 | `ctx.cotTranslation` | core | 0.2.1-alpha.x 起新增：链式思考翻译 seam（与其他 adapter seam 同级别） |
 | `ctx.actionCards` | core | 0.2.1-rc.2 起新增：动作卡片注册（`propose_action` 工具的 kind 包在此 seam 上）；个性化推荐 bundle 提供随附 kind |
 | `ctx.cuaAccess` | core | 0.2.1-rc.2 起新增：computer-use 访问控制 |
-| `ctx.forge` | core | 0.2.1-rc.2 起新增：Forge 提供方注册（`forge/providers-changed` 事件） |
+| `ctx.forge` | core | 0.2.1-rc.2 起新增：Forge 提供方注册（`forge/providers-changed` 事件）。**0.2.2-rc.1 起** `ForgeProvider.diff(ref, headSha, signal)`，`ChangeRequestSnapshot` 新增必填 overview 字段与 `threadsTruncated`，`ForgeFailure` 新增 `stale` / `unsupported`，`ForgeActionFailure` 新增 `unknown` |
 | `ctx.forgePanel` | core | 0.2.1-rc.2 起新增：Forge 面板能力 |
 | `ctx.forgeSession` | core | 0.2.1-rc.2 起新增：Forge 会话能力 |
 | `ctx.headlessStartup` | core | 0.2.1-rc.2 起新增：headless 启动期能力 |
@@ -189,11 +189,12 @@ harness 的核心服务（`ctx.<key>` → 角色 → 说明）：
 
 - **移除 E2B 线**：`e2b` / `fs-e2b` / `subprocess-e2b` 包已删除，`ctx.e2b` 随之消失；远程能力改由 SSH 家族承担——`ssh/fs-ssh`、`ssh/subprocess-ssh`、`ssh/sandbox-ssh`（依次对应原来的 `fs-e2b` / `subprocess-e2b` / `e2b`）。`ctx.codeRuntime` → `ctx.ptcRuntime` 同理。
 - **新增角色类别 `service`**（除已有的 core / seam / bundle 外）：尚未抽出扩展点的具体实现，当前有 `ctx.otel`（`telemetry/otel`）、`ctx.productAnalytics`（`client/product-analytics`）、`ctx.productTelemetry`（`host/product-telemetry-otel`）。
-- **插件作者相关的新服务**（括号内为 owner 包路径）：`ctx.hmr`（`boot/hmr`）、`ctx.configEditor`（`boot/config-editor`）、`ctx.pluginManager`（`boot/plugin-manager`）、`ctx.profileContext`（`boot/app-boot`）、`ctx.connection`（`client/connection`）、`ctx.mcpResources`（`mcp/mcp-resources`，seam）、`ctx.browserUse`（`browser-use/browser-use`，seam）、`ctx.computerUse`（`computer-use/computer-use`，seam）、`ctx.officeToPdf`（`document/office-to-pdf`）、`ctx.workspaceChanges`（`deliverables/workspace-changes`）、`ctx.schedule`（`schedule/schedule`）、`ctx.deepseekAccount`（`credentials/deepseek-account`，seam）、`ctx.speechToText`（`experimental/speech-to-text`，seam）、`ctx.speechController`（`experimental/api-speech-to-text`）。
+- **插件作者相关的新服务**（括号内为 owner 包路径）：`ctx.hmr`（`boot/hmr`）、`ctx.configEditor`（`boot/config-editor`）、`ctx.pluginManager`（`boot/plugin-manager`）、`ctx.profileContext`（`boot/app-boot`）、`ctx.connection`（`client/connection`）、`ctx.mcpResources`（`mcp/mcp-resources`，seam）、`ctx.browserUse`（`browser-use/browser-use`，seam）、`ctx.computerUse`（`computer-use/computer-use`，seam）、`ctx.officeKit`（`document/office-kit`）、`ctx.workspaceChanges`（`deliverables/workspace-changes`）、`ctx.schedule`（`schedule/schedule`）、`ctx.deepseekAccount`（`credentials/deepseek-account`，seam；0.2.2-rc.1 起实现包由 `dsh-deepseek-account-platform` 改为 `dsh-deepseek-account`，`PlatformAccount` → `DeepSeekAccount`）、`ctx.speechToText`（`experimental/speech-to-text`，seam）、`ctx.speechController`（`experimental/api-speech-to-text`）。
 - **提供方变动**：`ctx.workflowEngine` 的实现由 `workflow-worker-thread` 改为 `workflow-ptc`；`ctx.settings` 的 `settings-file` 提供方已移除（`@deepseek-ai/dsh-settings-file` 不再存在）。
 - 上游 `capability-seams` 表格的服务行数由 `0.1.5-rc.2` 的 72 行增至 `0.2.0-rc.2` 的 92 行；**0.2.1-alpha.4 又新增 7 项**：`pluginMarket` / `translator` / `remoteAccess` / `webApp` / `workingDirectory` / `worktrees` / `cotTranslation`；**0.2.1-rc.2 起再新增 8 项**：`actionCards` / `cuaAccess` / `forge` / `forgePanel` / `forgeSession` / `headlessStartup` / `liveshareShares` / `pluginRecommendations`。
+- **0.2.2-alpha.3 ~ rc.2 的服务变动**：`ctx.officeToPdf` → `ctx.officeKit`；`ctx.subagents` 删除 `drainChildren()` / `listChildren()` / `list()`（改用 `startActivation().dispose()`、`ctx.sessionQuery.observeSession()`、`getProvider()`）；`ctx.forge` 的 provider 契约新增 `headSha` / `stale` / `unsupported`；`ctx.deepseekAccount` 改用具体服务包 `dsh-deepseek-account`。
 
-> 本表已按本地 `0.2.2-alpha.2` SDK 重新核对：上游 `capability-seams` 页面是生成物且比本表长得多（该版有 107+ 个 `ctx.*` 服务），本表只保留插件开发常用项；以本地安装为准时，请先用该服务的 TypeScript 接口核对 key。
+> 本表已按本地 `0.2.2-rc.2` SDK 重新核对：上游 `capability-seams` 页面是生成物且比本表长得多（该版有 107+ 个 `ctx.*` 服务），本表只保留插件开发常用项；以本地安装为准时，请先用该服务的 TypeScript 接口核对 key。
 >
 > 完整列表（含每个 seam 的 Definition 包、全部 Provider 与直接消费方）以官方 capability-seams 页面为准；开发时以各服务 TypeScript 接口和子系统页面的 `cordis-surface` 区块为权威，不要维护静态清单。
 

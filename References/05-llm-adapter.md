@@ -2,7 +2,7 @@
 
 > 精简提炼自 develop/practice/llm-adapter、reference/cookbook/adding-an-llm-adapter、reference/subsystems/llm-streaming。
 > 参考实现：`packages/llm/llm-deepseek`（直接 HTTP + SSE，`eventsource-parser` 分帧）、`packages/llm/llm-pi-ai`（封装 LLM 库）。
-> 术语以 `@deepseek-ai/dsh-llm` **0.2.2-alpha.2** 的类型为准：工具调用 id 是 `ToolCallId`，旧名 `CallId` 已删除、SDK 不再导出。**0.2.2-alpha.2 起 `GenerateOptions.purpose` 改为声明式**（`LlmRequestPurposeMap`），见 §4。逐版本变化见 `References/00-INDEX.md`。
+> 术语以 `@deepseek-ai/dsh-llm` **0.2.2-rc.2** 的类型为准：工具调用 id 是 `ToolCallId`，旧名 `CallId` 已删除、SDK 不再导出。**0.2.2-alpha.2 起 `GenerateOptions.purpose` 改为声明式**（`LlmRequestPurposeMap`），见 §4；**0.2.2-rc.2 起 `new LlmError` 的 `code` 收窄为 `BuiltinLlmFailureCode`**，自定义 code 走 `LlmError.fromFailure()`，见 §6。逐版本变化见 `References/00-INDEX.md`。
 
 ## 1. 概述
 
@@ -140,7 +140,7 @@ cordis.yml 中使用：
 ## 6. 错误处理
 
 - 传输与协议故障：`throw new LlmError(msg, '<CODE>', { status?, providerRetryAfterMs?, requestId?, offloadImages? })`；`LlmError.failure` 携带可序列化的 `LlmFailure`（`message`/`code`/`status`/`providerRetryAfterMs`/`requestId`/`offloadImages`）。**不要依赖普通 `Error` 自动转换**。
-- `code` 是**自由字符串**，SDK 不提供错误码联合类型；核心导出的规范常量是 `CONTEXT_WINDOW_EXCEEDED`、`QUOTA`、`ACCOUNT_QUOTA`、`EMPTY_RESPONSE`、`INVALID_CREDENTIAL`、`IMAGE_OFFLOAD_REQUIRED`。其中 `IMAGE_OFFLOAD_REQUIRED` 配合 `offloadImages`（应卸载几处最旧的已保留图片）告诉调用方如何自愈；`UNSUPPORTED_OPTION` 是**适配器自有**约定（核心不导出），照惯例使用即可。
+- `code` 的类型是 **`BuiltinLlmFailureCode`**：`LLM_FAILURE_CODES` 的键或 `HTTP_<status>`；**自定义 code 不能直接传给构造函数**，用 `LlmError.fromFailure({ message, code, ...facts }, { cause })` 重新抛出。内置码含 `CONTEXT_WINDOW_EXCEEDED`、`QUOTA`、`ACCOUNT_QUOTA`、`EMPTY_RESPONSE`、`INVALID_CREDENTIAL`、`IMAGE_OFFLOAD_REQUIRED`、`UNSUPPORTED_OPTION` 等。其中 `IMAGE_OFFLOAD_REQUIRED` 配合 `offloadImages`（应卸载几处最旧的已保留图片）告诉调用方如何自愈。
 - 错误只有两条合法路径：从 `stream()` **抛出**（传输/协议故障，用带稳定 code 的 `LlmError`），或以 `finish { kind: 'error' | 'aborted', failure }` 结束流（提供方带内故障）。两条路径共用同一 `LlmFailure` 类型，消费方两者都处理。
 - 适配器必须禁用底层 SDK 的自动重试：**一次适配器调用 = 一次提供方尝试**。重试由挂载的 `@deepseek-ai/dsh-llm-retry` 在持久 agent 步骤边界执行，策略由适配器按路由提供：覆写 `providerRetryPolicy(provider)` 返回已解析策略，或返回 `undefined` 使用 normal 默认（`EMPTY_RESPONSE`、`RATE_LIMIT`、`SERVER`、`TIMEOUT`、`TRANSPORT` 最多重试 5 次，退避 500ms→10s、10% 抖动）；`always` 模式无上限。
 - 上下文溢出只有一个规范 code `CONTEXT_WINDOW_EXCEEDED`（用 `isContextWindowExceededError()` 分类，抛错或带内 finish 都一样）；`QUOTA` 表示配额/余额耗尽；正常结束但零内容块的 completion 是 `EMPTY_RESPONSE` 错误而非静默成功，默认会被重试。按 code 路由，绝不解析提供方文本。

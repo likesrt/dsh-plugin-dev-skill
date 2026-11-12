@@ -4,6 +4,48 @@
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-12
+
+DSH 上游发布 `dsh-v0.2.2-rc.2`（中间经过 `0.2.2-alpha.3` 与 `0.2.2-rc.1`）。本轮不是 `0.2.1-rc.1` 那种大重构，但包含 **cordis 基线升级**与若干公共 API 收窄。SDK 基线升到 `0.2.2-rc.2`（cordis `4.1.0`）。
+
+### 最需要注意的变更
+
+1. **cordis `4.0.6-alpha.1` → `4.1.0`**（上游升级指南未单列）：`Fiber.update()` 返回 `Awaitable<void>`；`internal/update` 监听器签名改为 `(this: Fiber, resolvedConfig, next: () => Awaitable<void>)`，`noSave` 拆到新的 `internal/commit` emit；`internal/config` 改为 `(fiber, next)`；服务提供方保留到依赖方卸载完，失败 fiber 只能靠 `update()` 恢复；`LoggerLevel` 数值顺序调整。
+2. **子代理工具改用名字寻址**（`subagent-names`）：`send_message` / `interrupt_agent` 的 `agent_id` 参数改为 `agent`；`list_agents` 行改为 `{ name, status, description? }`；`SubagentActivation.name` 必填；`subagent/catalog` payload v3。内置配置还把 `interrupt_agent` 默认关闭。
+3. **Office 服务改名**（`office-kit-package`）：`@deepseek-ai/dsh-office-to-pdf` → `@deepseek-ai/dsh-office-kit`，`ctx.officeToPdf` → `ctx.officeKit`，行 id `office-to-pdf` → `office-kit`，`OfficeToPdf*` 类型 → `OfficeKit*`。
+4. **`new LlmError` 的 `code` 收窄**（rc.2 代码实测，非 rc.2 指南）：`code` 只接受 `BuiltinLlmFailureCode`（`LLM_FAILURE_CODES` 键或 `HTTP_<status>`）；自定义 code 必须走 `LlmError.fromFailure(...)`。
+5. **`BundleInfo.updatable` → `BundleInfo.update`**（`plugin-update-method`）：可选值为 `'registry' | 'git'`；`ManagementError['code']` 新增 `unexpected-package`。
+
+### 同步（Sync with upstream 0.2.2-alpha.3 ~ rc.2）
+
+- **SDK 基线**：`@deepseek-ai/*` **0.2.2-alpha.2 → 0.2.2-rc.2**；cordis **4.0.6-alpha.1 → 4.1.0**。
+- **`SKILL.md` §0/§1**：基线声明改写；新增 `0.2.2-alpha.3 ~ rc.2` 摘要；`Fiber.update()` 返回类型改为 `Awaitable<void>`。
+- **`SKILL.md` §8**：`LlmError.code` 改为 `BuiltinLlmFailureCode`，补 `LlmError.fromFailure(...)`。
+- **`SKILL.md` §10**：补 `BundleInfo.update` / `ManagementError.unexpected-package`；组合包作者注意事项改为「截至 0.2.2-rc.2」。
+- **`SKILL.md` §11**：子代理段补名字寻址、catalog v3、`interrupt_agent` 默认关闭与 `ctx.subagents` 方法删除；Office 段改为 `office-kit` / `office_*` 工具；补 Forge / Worktree / Terminal / 账户边界变化与 UI 层 `ProcessActivity` / 窗口拖拽变化。
+- **`SKILL.md` §12**：新增 12 行错误表（子代理参数、`ctx.subagents` 方法、`BundleInfo.update`、`Session.append` 重载、`ctx.officeKit`、`LlmError` code、`AttachmentError` 继承链、Forge provider 契约、Web Search/Fetch `auth`、`TerminalBackendCleanupError`、`internal/update` 签名、`fiber.update()` 返回）。
+- **`SKILL.md` §13**：补 `0.2.2-alpha.3` / `0.2.2-rc.1` 的 24 篇指南清单；注明 `0.2.2-rc.2` 没有自己的指南，cordis 变化不在指南中。
+- **`References/00-INDEX.md`**：基线改写；术语表新增 9 行（office-kit、`BundleInfo.update`、`agent` 参数、`ctx.subagents` 方法删除、`dsh-deepseek-account`、`LlmError` code、`Fiber.update`、`internal/update`）。
+- **`References/02-plugin-basics.md`**：`Fiber.update()` 返回 `Awaitable<void>`，补 `internal/commit`。
+- **`References/03-tools.md`**：基线升到 `0.2.2-rc.2`。
+- **`References/05-llm-adapter.md`**：基线升到 `0.2.2-rc.2`；`LlmError.code` 改为 `BuiltinLlmFailureCode`，自定义 code 改走 `fromFailure()`。
+- **`References/06-framework-services-events.md`**：新增「0.2.2-alpha.3 ~ rc.2 的记录与 API 变动」（runtime-context 提醒包装、`Session.append` 重载、`internal/commit` / `internal/update` 签名）。
+- **`References/07-publish.md`**：补 `BundleInfo.update` 与 `ManagementError.unexpected-package`。
+- **`References/08-capability-layering.md`**：`ctx.officeToPdf` → `ctx.officeKit`；`ctx.web` / `ctx.terminals` / `ctx.worktrees` / `ctx.forge` / `ctx.deepseekAccount` 补 0.2.2 变化；新增服务变动汇总。
+- **`References/09-cordis-primer.md`**：cordis 升到 `4.1.0`；重写 `Fiber.update()`、`internal/update` / `internal/config` / `internal/commit`；新增 4.1.0 生命周期语义与 `LoggerLevel` 顺序。
+- **`AGENTS.md`**：cordis 基线 floor 改为 `4.1.0`；更新检查地址改为 `likesrt/dsh-plugin-dev-skill`。
+- **未全量并入**：rc.2 补录了 21 篇更早版本（`v0.2.1-rc.2` ~ `v0.2.2-alpha.2`）的指南；本轮只并入已用 rc.2 类型/源码核实的项（`LlmError`、`ctx.subagents` 方法删除等），其余留待单独评估。
+
+### 修复
+
+- **更新检查的 tag 选择**：`SKILL.md §0.1` 与 CI 的 `git ls-remote` 加 `--refs`（并剥离 `^{}` 后缀），避免 annotated tag 的 peeled 引用 `vX.Y.Z^{}` 被当成最新 tag，导致 tag-pinned raw URL 失效。
+- **仓库地址**：`SKILL.md` / `AGENTS.md` / `README*` / `SECURITY.md` / `scripts/verify.sh` / CI 中本技能仓库地址由 `green-dalii/dsh-plugin-dev-skill` 改为 `likesrt/dsh-plugin-dev-skill`。
+
+### 元数据
+
+- **`VERSION` / SKILL.md frontmatter `metadata.version`**：0.7.0 → 0.8.0（基线升级，minor bump）。
+- **`README.md` / `README.zh-CN.md`**：DSH badge 由 `0.2.2--alpha.2` 改为 `0.2.2--rc.2`；skill 版本徽章 `0.7.0` → `0.8.0`；更新日期 `2026-11-12`；正文基线说明与最新 release 链接同步。
+
 ## [0.7.0] - 2026-11-01
 
 DSH 上游发布 `dsh-v0.2.2-alpha.2`（中间经过 `0.2.1-alpha.5` 与 `0.2.1-rc.1` ~ `rc.5`）：**这是一次大重构**——跨越 43 篇上游升级指南，其中 **25 篇对插件开发有实质影响**，**对 tool / LLM / service 插件的公共 API 破坏**。本版本把 SDK 基线升到 `0.2.2-alpha.2`（cordis `4.0.6-alpha.1`），并按破坏性变更的实际影响面逐条修订 SKILL.md / References。
